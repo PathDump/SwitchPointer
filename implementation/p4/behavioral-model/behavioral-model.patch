@@ -1,0 +1,102 @@
+diff --git a/src/bm_sim/calculations.cpp b/src/bm_sim/calculations.cpp
+index 2ebd56f..0404cf6 100644
+--- a/src/bm_sim/calculations.cpp
++++ b/src/bm_sim/calculations.cpp
+@@ -34,6 +34,20 @@
+ #include "crc_tables.h"
+ #include "extract.h"
+ 
++
++#define mix(a,b,c) \
++{ \
++      a -= b; a -= c; a ^= (c>>13); \
++      b -= c; b -= a; b ^= (a<<8); \
++      c -= a; c -= b; c ^= (b>>13); \
++      a -= b; a -= c; a ^= (c>>12);  \
++      b -= c; b -= a; b ^= (a<<16); \
++      c -= a; c -= b; c ^= (b>>5); \
++      a -= b; a -= c; a ^= (c>>3);  \
++      b -= c; b -= a; b ^= (a<<10); \
++      c -= a; c -= b; c ^= (b>>15); \
++}
++
+ namespace bm {
+ 
+ void
+@@ -130,6 +144,11 @@ uint64_t xxh64(const char *buffer, size_t s) {
+   return XXH64(buffer, s, 0);
+ }
+ 
++uint32_t xxh32(const char *buffer, size_t s) {
++  return XXH32(buffer, s, 0);
++}
++
++
+ }  // namespace hash
+ 
+ namespace {
+@@ -160,6 +179,55 @@ struct xxh64 {
+   }
+ };
+ 
++struct xxh32 {
++  uint64_t operator()(const char *buf, size_t len) const {
++    return XXH32(buf, len, 0);
++  }
++};
++
++struct jenkins_hash32 {
++    uint32_t operator()(const char *buf,size_t len) const{
++       
++        uint32_t seed = 0;
++        uint32_t hashes[3];
++
++        
++        /* first four bytes are for seed */
++        seed = (seed << 8) + buf[0];
++        seed = (seed << 8) + buf[1];
++        seed = (seed << 8) + buf[2];
++        seed = (seed << 8) + buf[3];
++        
++        /* adjust buf and len */
++        buf = buf+4;
++        len = len-4;
++        
++        /* compute hash */
++        hashes[0]=hashes[1]=0x9e3779b9;
++        hashes[2]=seed;
++        hashes[2] += len;
++        
++        /* mostly likely len is 4 -- 4 bytes ip address*/
++        switch(len)
++        {
++            case 5:
++                hashes[1] += (uint32_t)buf[4];
++            case 4:
++                hashes[0] += (uint32_t)buf[3]<<24;
++            case 3:
++                hashes[0] += (uint32_t)buf[2]<<16;
++            case 2:
++                hashes[0] += (uint32_t)buf[1]<<8;
++            case 1:
++                hashes[0] += (uint32_t)buf[0];
++
++        }
++
++        mix(hashes[0],hashes[1],hashes[2]);
++        return hashes[2];
++    }
++};
++
+ struct crc16 {
+   uint16_t operator()(const char *buf, size_t len) const {
+     uint16_t remainder = 0x0000;
+@@ -373,7 +441,7 @@ struct identity {
+ 
+ // if REGISTER_HASH calls placed in the anonymous namespace, some compiler can
+ // give an unused variable warning
+-REGISTER_HASH(xxh64);
++REGISTER_HASH(jenkins_hash32);
+ REGISTER_HASH(crc16);
+ REGISTER_HASH(crc32);
+ REGISTER_HASH(crcCCITT);

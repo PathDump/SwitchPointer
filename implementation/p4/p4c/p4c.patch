@@ -1,0 +1,71 @@
+diff --git a/backends/bmv2/simpleSwitch.cpp b/backends/bmv2/simpleSwitch.cpp
+index caeb6cc..3a975e2 100644
+--- a/backends/bmv2/simpleSwitch.cpp
++++ b/backends/bmv2/simpleSwitch.cpp
+@@ -114,6 +114,8 @@ SimpleSwitch::convertHashAlgorithm(cstring algorithm) {
+         result = "random";
+     else if (algorithm == v1model.algorithm.identity.name)
+         result = "identity";
++    else if (algorithm == v1model.algorithm.jenkins_hash32.name)
++        result = "jenkins_hash32";
+     else
+         ::error("%1%: unexpected algorithm", algorithm);
+     return result;
+@@ -262,7 +264,8 @@ SimpleSwitch::convertExternFunctions(Util::JsonArray *result,
+             v1model.algorithm.crc32.name, v1model.algorithm.crc32_custom.name,
+             v1model.algorithm.crc16.name, v1model.algorithm.crc16_custom.name,
+             v1model.algorithm.random.name, v1model.algorithm.identity.name,
+-            v1model.algorithm.csum16.name, v1model.algorithm.xor16.name
++            v1model.algorithm.csum16.name, v1model.algorithm.xor16.name,
++            v1model.algorithm.jenkins_hash32.name
+         };
+ 
+         if (mc->arguments->size() != 5) {
+diff --git a/frontends/p4/fromv1.0/programStructure.cpp b/frontends/p4/fromv1.0/programStructure.cpp
+index c3949f4..9fe99bb 100644
+--- a/frontends/p4/fromv1.0/programStructure.cpp
++++ b/frontends/p4/fromv1.0/programStructure.cpp
+@@ -841,6 +841,8 @@ const IR::Expression* ProgramStructure::convertHashAlgorithm(IR::ID algorithm) {
+         result = v1model.algorithm.csum16.Id();
+     } else if (algorithm == "xor16") {
+         result = v1model.algorithm.xor16.Id();
++    } else if (algorithm == "jenkins_hash32") {
++        result = v1model.algorithm.jenkins_hash32.Id();
+     } else {
+         ::warning("%1%: unexpected algorithm", algorithm);
+         result = algorithm;
+diff --git a/frontends/p4/fromv1.0/v1model.h b/frontends/p4/fromv1.0/v1model.h
+index 7719269..e0169ad 100644
+--- a/frontends/p4/fromv1.0/v1model.h
++++ b/frontends/p4/fromv1.0/v1model.h
+@@ -190,7 +190,7 @@ struct Algorithm_Model : public ::Model::Enum_Model {
+     Algorithm_Model() : ::Model::Enum_Model("HashAlgorithm"),
+                         crc32("crc32"), crc32_custom("crc32_custom"),
+                         crc16("crc16"), crc16_custom("crc16_custom"),
+-                        random("random"), identity("identity"), csum16("csum16"), xor16("xor16") {}
++                        random("random"), identity("identity"), csum16("csum16"), xor16("xor16"), jenkins_hash32("jenkins_hash32") {}
+     ::Model::Elem crc32;
+     ::Model::Elem crc32_custom;
+     ::Model::Elem crc16;
+@@ -199,6 +199,7 @@ struct Algorithm_Model : public ::Model::Enum_Model {
+     ::Model::Elem identity;
+     ::Model::Elem csum16;
+     ::Model::Elem xor16;
++    ::Model::Elem jenkins_hash32;
+ };
+ 
+ struct Hash_Model : public ::Model::Elem {
+diff --git a/p4include/v1model.p4 b/p4include/v1model.p4
+index d79c986..dfd353c 100644
+--- a/p4include/v1model.p4
++++ b/p4include/v1model.p4
+@@ -117,7 +117,8 @@ enum HashAlgorithm {
+     random,
+     identity,
+     csum16,
+-    xor16
++    xor16,
++    jenkins_hash32
+ }
+ 
+ extern void mark_to_drop();

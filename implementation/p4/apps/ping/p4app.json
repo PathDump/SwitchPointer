@@ -1,0 +1,33 @@
+{
+    "program": "../../../p4src/switchPointer.p4",
+    "language": "p4-16",
+    "targets": {
+      "multiswitch": {
+          "auto-control-plane": true,
+          "cli": true,
+          "pcap_dump": false,
+          "bmv2_log": false,
+          "links": [["h1", "s1"], ["s1", "s2"],["s2","h2"]],
+          "hosts": {
+            "h1": {
+		"cmd":"sh host1_init.sh",
+		"startup_sleep": 0.2,
+		"wait": true
+            },
+            "h2": {
+		"cmd":"sh host2_init.sh",
+		"startup_sleep": 0.2,
+		"wait": true
+            }
+          },
+          "switches": {
+              "s1": {
+                  "entries": "s1-commands.txt"
+                },
+              "s2": {
+                  "entries": "s2-commands.txt"
+                }
+          }
+	    }
+    }
+}
